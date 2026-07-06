@@ -82,7 +82,11 @@ load_os() {
     echo "Cannot read /etc/os-release — unsupported OS." >&2
     exit 1
   fi
+  # os-release may reference optional vars — avoid set -u tripping here
+  set +u
+  # shellcheck disable=SC1091
   . /etc/os-release
+  set -u
   OS_ID="${ID:-unknown}"
   OS_ID_LIKE="${ID_LIKE:-}"
   OS_NAME="${PRETTY_NAME:-$OS_ID}"
@@ -94,29 +98,29 @@ detect_family() {
   load_os
 
   case "$OS_ID" in
-    ubuntu)                          echo "ubuntu" ;;
-    debian)                          echo "debian" ;;
-    linuxmint|pop|elementary|zorin)  echo "ubuntu" ;;
-    kali|parrot)                     echo "debian" ;;
-    fedora)                          echo "fedora" ;;
-    centos|rocky|almalinux|ol|amzn)  echo "centos" ;;
-    rhel)                            echo "rhel" ;;
-    arch|cachyos|endeavouros|manjaro|garuda|artix) echo "arch" ;;
-    opensuse-leap|opensuse-tumbleweed|opensuse-suse|sles) echo "opensuse" ;;
-    alpine)                          echo "alpine" ;;
+    ubuntu)                          OS_FAMILY="ubuntu" ;;
+    debian)                          OS_FAMILY="debian" ;;
+    linuxmint|pop|elementary|zorin)  OS_FAMILY="ubuntu" ;;
+    kali|parrot)                     OS_FAMILY="debian" ;;
+    fedora)                          OS_FAMILY="fedora" ;;
+    centos|rocky|almalinux|ol|amzn)  OS_FAMILY="centos" ;;
+    rhel)                            OS_FAMILY="rhel" ;;
+    arch|cachyos|endeavouros|manjaro|garuda|artix) OS_FAMILY="arch" ;;
+    opensuse-leap|opensuse-tumbleweed|opensuse-suse|sles) OS_FAMILY="opensuse" ;;
+    alpine)                          OS_FAMILY="alpine" ;;
     *)
       if [[ "$OS_ID_LIKE" == *ubuntu* ]]; then
-        echo "ubuntu"
+        OS_FAMILY="ubuntu"
       elif [[ "$OS_ID_LIKE" == *debian* ]]; then
-        echo "debian"
+        OS_FAMILY="debian"
       elif [[ "$OS_ID_LIKE" == *fedora* ]] || [[ "$OS_ID_LIKE" == *rhel* ]] || [[ "$OS_ID_LIKE" == *centos* ]]; then
-        echo "centos"
+        OS_FAMILY="centos"
       elif [[ "$OS_ID_LIKE" == *arch* ]]; then
-        echo "arch"
+        OS_FAMILY="arch"
       elif [[ "$OS_ID_LIKE" == *suse* ]]; then
-        echo "opensuse"
+        OS_FAMILY="opensuse"
       else
-        echo "unknown"
+        OS_FAMILY="unknown"
       fi
       ;;
   esac
@@ -241,16 +245,14 @@ install_via_convenience_script() {
 }
 
 install_docker() {
-  local family
-  load_os
-  family="$(detect_family)"
+  detect_family
 
   export DEBIAN_FRONTEND=noninteractive
 
-  info "Detected system: ${OS_NAME} (${family})"
+  info "Detected system: ${OS_NAME} (${OS_FAMILY})"
   echo
 
-  case "$family" in
+  case "$OS_FAMILY" in
     ubuntu)   install_ubuntu ;;
     debian)   install_debian ;;
     fedora)   install_fedora ;;

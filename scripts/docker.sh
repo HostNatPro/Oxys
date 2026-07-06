@@ -242,6 +242,7 @@ install_via_convenience_script() {
 
 install_docker() {
   local family
+  load_os
   family="$(detect_family)"
 
   export DEBIAN_FRONTEND=noninteractive
